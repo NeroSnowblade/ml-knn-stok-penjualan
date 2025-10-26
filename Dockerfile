@@ -21,4 +21,6 @@ ENV PORT 5000
 EXPOSE ${PORT}
 
 # Use gunicorn (WSGI) for production. App entrypoint is `app:app` (app.py -> create_app())
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:${PORT}", "--workers", "3"]
+# Use shell form so the $PORT env var is expanded by the shell at container start.
+# This avoids errors where the JSON array form would pass the literal '${PORT}'.
+CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 3
