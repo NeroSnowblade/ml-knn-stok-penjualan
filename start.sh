@@ -6,4 +6,4 @@ PORT_NUMBER="${PORT:-5000}"  # default to 5000 if not set
 
 echo "Starting app with Waitress on 0.0.0.0:${PORT_NUMBER}"
 # exec so PID 1 is the server process
-exec waitress-serve --listen=0.0.0.0:${PORT_NUMBER} "app:app"
+exec waitress-serve --listen=0.0.0.0:${PORT_NUMBER} "wsgi:app"

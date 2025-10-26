@@ -18,7 +18,11 @@ def create_app():
     # Do not use setdefault here because Flask sets SECRET_KEY to None by default;
     # setdefault would skip overriding an existing (None) key.
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "dev-secret-key"
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
+    # Support both common env names: Railway/Heroku provide DATABASE_URL,
+    # some docs/configs use DATABASE_URI. Prefer DATABASE_URL if present.
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        os.environ.get("DATABASE_URL") or os.environ.get("DATABASE_URI") or "sqlite:///app.db"
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)

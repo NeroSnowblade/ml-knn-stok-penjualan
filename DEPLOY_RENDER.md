@@ -28,8 +28,8 @@ Option A — Deploy with Dockerfile (recommended for parity)
 Option B — Deploy without Docker (Railway auto-build Python)
 1. Create a new Project -> Deploy from GitHub -> select the repo/branch.
 2. Railway will try to detect the project type. If it selects Python, ensure the following settings are present:
-   - Build command: pip install -r requirements.txt
-   - Start command: gunicorn app:app --workers 3 --bind 0.0.0.0:$PORT
+  - Build command: pip install -r requirements.txt
+  - Start command: waitress-serve --listen=0.0.0.0:$PORT wsgi:app
 3. Set environment variables (SECRET_KEY, FLASK_ENV=production, DATABASE_URL if using external DB).
 4. Deploy.
 

@@ -17,7 +17,7 @@ Options
 2) Deploy without Docker (Platform builds a Python app)
 - If you choose to let Railway build from the repo (no Docker), set the start command to:
 
-  waitress-serve --listen=0.0.0.0:$PORT app:app
+  waitress-serve --listen=0.0.0.0:$PORT wsgi:app
 
 - Ensure `requirements.txt` is used by the build and that `waitress` is present (it is included in `requirements.txt`).
 - Add necessary environment variables in Railway (e.g., `SECRET_KEY`, `DATABASE_URL`).
@@ -35,8 +35,8 @@ Local testing
   python -m venv .venv
   .\.venv\Scripts\Activate.ps1  # PowerShell on Windows
   pip install -r requirements.txt
-  set PORT=5000; waitress-serve --listen=0.0.0.0:5000 app:app
+  set PORT=5000; waitress-serve --listen=0.0.0.0:5000 wsgi:app
 
-(Or on PowerShell use $Env:PORT=5000; waitress-serve --listen=0.0.0.0:5000 app:app)
+(Or on PowerShell use $Env:PORT=5000; waitress-serve --listen=0.0.0.0:5000 wsgi:app)
 
 If you want me to also remove the gunicorn mention from other docs or add a `Procfile` for other hosts, tell me which file to edit and I'll update it.
