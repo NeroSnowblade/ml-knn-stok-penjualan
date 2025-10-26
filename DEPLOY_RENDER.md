@@ -1,72 +1,83 @@
-Render deployment guide for this Flask app
 
-This document walks you through deploying the project to Render (https://render.com). It assumes you have a GitHub repository for the project and a Render account.
+Railway deployment guide for this Flask app
+
+This document walks you through deploying the project to Railway (https://railway.app). It assumes you have a GitHub repository for the project and a Railway account.
 
 Overview
-- We provide two options on Render:
-  1. Auto-build from repo (Python environment) — set Build & Start commands.
-  2. Deploy using Dockerfile (recommended for exact parity).
+- Railway supports deploying from a repository (auto-build) or using a Dockerfile. Railway provides a managed PostgreSQL plugin which exposes a `DATABASE_URL` environment variable — this is convenient for production.
 
 Quick checklist before deploying
 1. Ensure `requirements.txt` is up-to-date.
 2. Ensure `app.py` exposes `app = create_app()` (present in repo).
-3. Do NOT commit any secret keys. Use Render Environment variables to provide `SECRET_KEY` and `DATABASE_URL`.
+3. Do NOT commit any secret keys. Use Railway Environment variables to provide `SECRET_KEY` and `DATABASE_URL`.
 
-Recommended: use Render's Managed Postgres for production DB.
+Recommended: use Railway's Managed Postgres plugin for production.
 
-Option A — Deploy with Dockerfile (recommended)
-1. Commit and push the repo (including this Dockerfile) to GitHub.
-2. On Render:
-   - Create a new Web Service -> Connect a repository -> select your repo and branch.
-   - Choose "Docker" (Render will use the Dockerfile).
-   - Set environment variables (in the Render service settings):
-     - SECRET_KEY (set to a secure random string)
-     - FLASK_ENV=production
-     - (optional) other secrets like EMAIL credentials
-   - If you will use Postgres, create a Managed Database on Render (see below) and set `DATABASE_URL` in the Web Service's environment variables to the value given by the managed DB.
-   - Deploy.
+Option A — Deploy with Dockerfile (recommended for parity)
+1. Commit and push the repo (including the Dockerfile) to GitHub.
+2. On Railway:
+   - Create a new Project -> Deploy from GitHub -> select your repository and branch.
+   - Railway will detect the Dockerfile and build accordingly.
+   - In the project settings (Variables), add environment variables:
+     - `SECRET_KEY` — a secure random string
+     - `FLASK_ENV=production`
+     - (optional) other secrets like email credentials
+   - If you want a managed Postgres, in your Railway project add the Postgres plugin (Add Plugin -> Postgres). Railway will provision a DB and make a `DATABASE_URL` variable available to your service.
+   - Deploy the service.
 
-Option B — Deploy by letting Render install deps (no Dockerfile)
-1. Create Web Service -> connect repo
-2. Environment: Python
-3. Build Command: pip install -r requirements.txt
-4. Start Command: gunicorn app:app --workers 3 --bind 0.0.0.0:$PORT
-5. Set environment variables (SECRET_KEY, FLASK_ENV=production, DATABASE_URL).
-6. Deploy.
+Option B — Deploy without Docker (Railway auto-build Python)
+1. Create a new Project -> Deploy from GitHub -> select the repo/branch.
+2. Railway will try to detect the project type. If it selects Python, ensure the following settings are present:
+   - Build command: pip install -r requirements.txt
+   - Start command: gunicorn app:app --workers 3 --bind 0.0.0.0:$PORT
+3. Set environment variables (SECRET_KEY, FLASK_ENV=production, DATABASE_URL if using external DB).
+4. Deploy.
 
-Managed Postgres on Render
-1. In Render dashboard, create a new "Postgres" instance.
-2. After it's ready, go to the DB details. Copy the DATABASE_URL connection string.
-3. Add `DATABASE_URL` as an Environment Variable in the Web Service (or use the Render UI datastore linking if available).
+Managed Postgres on Railway
+1. In the Railway project UI, click "Add Plugin" and choose Postgres.
+2. After provisioning, Railway will expose a `DATABASE_URL` environment variable in the project environment automatically.
+3. The web service inherits these variables; confirm `DATABASE_URL` is present under variables for the service.
 
 Database initialization & seeding
-- On first deploy the app will run normally but may require creating tables and seeding data.
-- You have options:
-  1. Use Render's Web Console (open a shell) and run a Python one-liner to create tables and seed:
-     - Example commands (in Render shell):
-       python -c "from app import create_app; app=create_app(); from app import db; from app.utils import seed_dummy_electronics_data; with app.app_context(): db.create_all(); seed_dummy_electronics_data(12)"
-  2. Or, after deploy, visit the admin-only URL `/admin/seed-dummy` (login as admin/admin123) to trigger seeding. Make sure the default admin exists (seed_default_admin runs at startup).
+- After the first deploy you must create tables and (optionally) seed dummy data. Options:
+  1. Use Railway's web "Run" command to execute a one-off command in the deployed environment. Example (Railway Web or CLI):
+     ```bash
+     # With Railway CLI
+     railway run python -c "from app import create_app; app=create_app(); from app import db; from app.utils import seed_dummy_electronics_data; with app.app_context(): db.create_all(); seed_dummy_electronics_data(12)"
+     ```
+     Or use the Railway web "Run" UI to execute the same python -c command.
+  2. Simpler: after deploying, visit the admin-only URL `/admin/seed-dummy` (login as admin/admin123) to trigger seeding. The app seeds a default admin at startup.
 
-Environment variables you should set on Render
-- SECRET_KEY — random secret
-- FLASK_ENV — production
-- DATABASE_URL — connection string for Postgres (optional; if omitted the app will use sqlite:///app.db)
+Environment variables you should set on Railway
+- `SECRET_KEY` — a secure random secret
+- `FLASK_ENV` — production
+- `DATABASE_URL` — connection string from Railway Postgres plugin (if using)
 
 Ports and Webserver
-- Render sets $PORT automatically. The Dockerfile and `gunicorn ... $PORT` command above honor this.
+- Railway exposes the `$PORT` environment variable. The Dockerfile and the recommended start command use `$PORT`.
+
+Railway CLI (optional)
+- Install the Railway CLI to run commands locally against your Railway project:
+  - https://docs.railway.app/develop/cli
+- Example one-off run with CLI:
+  ```powershell
+  railway login
+  railway link # link to project
+  railway run python -c "from app import create_app; app=create_app(); from app import db; from app.utils import seed_dummy_electronics_data; with app.app_context(): db.create_all(); seed_dummy_electronics_data(12)"
+  ```
 
 Logging & troubleshooting
-- Use Render logs to see startup errors.
-- If you see import issues, check `requirements.txt`.
-- If DB fails, open the Render DB console and test connections.
+- Use Railway deployments/logs to inspect startup output and errors.
+- Common causes of failure: missing env vars, missing dependencies in `requirements.txt`, DB connection string not set.
 
-Optional: use a background job or Render cron to run periodic maintenance.
+Optional extras
+- If you prefer IaC, I can draft a `railway.json` or `railway` config snippet but Railway’s project linking typically expects you to select plugins via the web UI.
+- I can also add a `start.sh` script to the repo to ensure `$PORT` fallback and provide a `Makefile` with convenience targets for local dev.
 
-Want me to create a Render `render.yaml` too?
-- I can produce a `render.yaml` with a web service and managed DB resources, but linking managed DB automatically sometimes requires Render-specific service names.
-- Tell me if you want the `render.yaml` and I’ll add a draft you can adapt.
+Next steps I can do for you
+- Create a `railway` config draft.
+- Add a `start.sh`/`Makefile` for convenience.
+- Walk through the Railway dashboard with the exact fields to change.
 
-If you'd like, I can also:
-- Add a small `Makefile` with convenience commands for local run / build.
-- Add a tiny `start.sh` to ensure `$PORT` fallback.
+
 
