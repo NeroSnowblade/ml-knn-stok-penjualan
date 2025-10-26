@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% set active_page = "transactions" %}
+
+{% if transaction %}
+  {% set form_title = "Edit Transaksi" %}
+  {% set action_url = url_for('transactions.edit_transaction', transaction_id=transaction.id) %}
+  {% set selected_date = transaction.tanggal_transaksi.strftime('%Y-%m-%d') %}
+{% else %}
+  {% set form_title = "Tambah Transaksi" %}
+  {% set action_url = url_for('transactions.create_transaction') %}
+  {% set selected_date = '' %}
+{% endif %}
+
+{% block title %}{{ form_title }}{% endblock %}
+{% block header %}{{ form_title }}{% endblock %}
+
+{% block content %}
+  <div class="mb-3">
+    <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-outline-secondary btn-sm">&larr; Kembali</a>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <form method="post" id="transaction-form">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label" for="tanggal_transaksi">Tanggal Transaksi</label>
+            <input type="date" class="form-control" id="tanggal_transaksi" name="tanggal_transaksi" value="{{ selected_date }}" required>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="h6 mb-0">Detail Item</h2>
+          <button class="btn btn-outline-primary btn-sm" type="button" id="add-item">Tambah Item</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle" id="items-table">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 45%">Produk</th>
+                <th style="width: 20%" class="text-center">Jumlah</th>
+                <th style="width: 20%" class="text-end">Harga Satuan</th>
+                <th style="width: 15%" class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set items = transaction.items if transaction else [] %}
+              {% if items %}
+                {% for item in items %}
+                  <tr>
+                    <td>
+                      <select class="form-select" name="product_id[]" required data-role="product">
+                        <option value="">-- Pilih Produk --</option>
+                        {% for product in products %}
+                          <option value="{{ product.id }}" data-price="{{ '%.2f'|format(product.harga|float) }}" {% if product.id == item.id_barang %}selected{% endif %}>
+                            {{ product.nama }} ({{ product.tipe_barang }})
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control text-center" name="quantity[]" min="1" required value="{{ item.jumlah }}">
+                    </td>
+                    <td class="text-end" data-role="price">Rp {{ '%.2f'|format(item.harga|float) }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-item">Hapus</button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr class="placeholder-row">
+                  <td colspan="4" class="text-center text-muted">Belum ada item, klik "Tambah Item".</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-outline-secondary">Batal</a>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    const PRODUCTS_DATA = [
+      {%- for product in products -%}
+        {{ {
+          'id': product.id,
+          'name': product.nama,
+          'price': '%.2f'|format(product.harga|float),
+          'type': product.tipe_barang
+        } | tojson }}{% if not loop.last %},{% endif %}
+      {%- endfor -%}
+    ];
+  </script>
+  <script src="{{ url_for('static', filename='js/transactions.js') }}"></script>
+{% endblock %}

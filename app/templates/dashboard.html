@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block header %}Dashboard Penjualan{% endblock %}
+
+{% block content %}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h2 class="h6 text-muted">Total Produk</h2>
+          <p class="display-6 mb-0">{{ total_products }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h2 class="h6 text-muted">Total Transaksi</h2>
+          <p class="display-6 mb-0">{{ total_transactions }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h2 class="h6 text-muted">Total Pendapatan</h2>
+          <p class="display-6 mb-0">Rp {{ total_revenue|currency }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h2 class="h6">Performa Bulanan</h2>
+      <canvas id="salesChart" height="120"></canvas>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script>
+    const ctx = document.getElementById('salesChart');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [
+          {
+            label: 'Jumlah Terjual',
+            data: {{ chart_qty|safe }},
+            borderColor: '#0d6efd',
+            tension: 0.4,
+            yAxisID: 'y',
+            fill: false,
+          },
+          {
+            label: 'Pendapatan (Rp)',
+            data: {{ chart_revenue|safe }},
+            borderColor: '#ffc107',
+            backgroundColor: '#ffc10733',
+            tension: 0.4,
+            yAxisID: 'y1',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        stacked: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+          },
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: {
+              drawOnChartArea: false,
+            },
+          },
+        },
+      },
+    });
+  </script>
+{% endblock %}

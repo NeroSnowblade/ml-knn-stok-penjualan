@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% set active_page = "reports" %}
+
+{% block title %}Laporan Penjualan{% endblock %}
+{% block header %}Laporan Penjualan Produk{% endblock %}
+
+{% block content %}
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <h2 class="h6 text-muted mb-1">Informasi</h2>
+      <p class="mb-0 small text-muted">Laporan menampilkan akumulasi penjualan per produk dan per bulan. Gunakan tombol prediksi untuk menghitung kebutuhan stok bulan berikutnya dengan metode K-Nearest Neighbor.</p>
+    </div>
+  </div>
+
+  <!-- Filter dan Tabel Bulanan -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('reports.sales_report', month=prev_month, year=prev_year, page_month=1, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.page, per_page_year=per_page_year) }}">&laquo; Bulan Sebelumnya</a>
+      </div>
+      <div class="col-auto">
+        <label class="col-form-label" for="month">Bulan:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select form-select-sm" id="month" name="month">
+          {% for m in month_options %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ "%02d"|format(m) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="col-form-label" for="year">Tahun:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select form-select-sm" id="year" name="year">
+          {% for y in year_options %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('reports.sales_report', month=next_month, year=next_year, page_month=1, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.page, per_page_year=per_page_year) }}">Bulan Berikutnya &raquo;</a>
+      </div>
+      <div class="col-auto">
+        <label class="col-form-label" for="per_page_month">Baris/hal:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select form-select-sm" id="per_page_month" name="per_page_month">
+          {% for option in per_page_month_options %}
+            <option value="{{ option }}" {% if option == per_page_month %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <input type="hidden" name="annual_year" value="{{ annual_year }}">
+        <input type="hidden" name="page_year" value="{{ annual_pagination.page }}">
+        <input type="hidden" name="per_page_year" value="{{ per_page_year }}">
+        <button type="submit" class="btn btn-sm btn-primary">Terapkan</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Produk</th>
+            <th>Tipe</th>
+            <th class="text-center">Jumlah Terjual</th>
+            <th class="text-end">Total Pendapatan</th>
+            <th class="text-end">Prediksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in monthly_pagination.items %}
+            <tr {% if prediction_product_id == row.product_id %}class="table-info"{% endif %}>
+              <td>{{ row.product_name }}</td>
+              <td>{{ row.product_type }}</td>
+              <td class="text-center">{{ row.total_qty }}</td>
+              <td class="text-end">Rp {{ row.total_revenue|currency }}</td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('reports.predict_sales') }}" class="d-inline-flex align-items-center justify-content-end gap-2">
+                  <input type="hidden" name="product_id" value="{{ row.product_id }}">
+                  <input type="hidden" name="month" value="{{ month }}">
+                  <input type="hidden" name="year" value="{{ year }}">
+                  <input type="number" class="form-control form-control-sm w-25" name="k" min="1" value="{{ prediction_k if prediction_product_id == row.product_id and prediction_k else 3 }}" title="Nilai K">
+                  <button type="submit" class="btn btn-outline-primary btn-sm">Prediksi</button>
+                </form>
+                {% if prediction_product_id == row.product_id and prediction_qty is not none %}
+                  <div class="small mt-2">Perkiraan stok bulan {{ prediction_period }}: <span class="badge bg-primary">{{ prediction_qty }}</span></div>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Belum ada data penjualan untuk ditampilkan.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="mt-2 mb-4">
+    <ul class="pagination pagination-sm justify-content-end">
+      <li class="page-item {% if not monthly_pagination.has_prev %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.prev_num, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.page, per_page_year=per_page_year) }}">Sebelumnya</a>
+      </li>
+        {% for token in monthly_pagination.pages | pagination_tokens(monthly_pagination.page) %}
+          {% if token == '...' %}
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          {% else %}
+            <li class="page-item {% if token == monthly_pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=token, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.page, per_page_year=per_page_year) }}">{{ token }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+      <li class="page-item {% if not monthly_pagination.has_next %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.next_num, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.page, per_page_year=per_page_year) }}">Berikutnya</a>
+      </li>
+    </ul>
+  </nav>
+  
+  <!-- Tabel Tetangga Terdekat -->
+  {% if prediction_neighbors %}
+    <div class="card shadow-sm border-0 my-4">
+      <div class="card-body">
+        <h2 class="h6">Tetangga Terdekat (KNN)</h2>
+        <p class="small text-muted mb-3">Daftar periode yang digunakan sebagai referensi prediksi.</p>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Periode</th>
+                <th class="text-center">Jumlah Terjual</th>
+                <th class="text-center">Jarak</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for neighbor in prediction_neighbors %}
+                <tr>
+                  <td>{{ neighbor[0] }}</td>
+                  <td class="text-center">{{ neighbor[1] }}</td>
+                  <td class="text-center">{{ neighbor[2] }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Tabel Tahunan -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.page, per_page_month=per_page_month, annual_year=prev_annual_year, page_year=1, per_page_year=per_page_year) }}">&laquo; Tahun Sebelumnya</a>
+      </div>
+      <div class="col-auto">
+        <label class="col-form-label" for="annual_year">Tahun:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select form-select-sm" id="annual_year" name="annual_year">
+          {% for y in year_options %}
+            <option value="{{ y }}" {% if y == annual_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.page, per_page_month=per_page_month, annual_year=next_annual_year, page_year=1, per_page_year=per_page_year) }}">Tahun Berikutnya &raquo;</a>
+      </div>
+      <div class="col-auto">
+        <label class="col-form-label" for="per_page_year">Baris/hal:</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select form-select-sm" id="per_page_year" name="per_page_year">
+          {% for option in per_page_year_options %}
+            <option value="{{ option }}" {% if option == per_page_year %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <input type="hidden" name="month" value="{{ month }}">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="page_month" value="{{ monthly_pagination.page }}">
+        <input type="hidden" name="per_page_month" value="{{ per_page_month }}">
+        <button type="submit" class="btn btn-sm btn-primary">Terapkan</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Produk</th>
+            <th>Tipe</th>
+            <th class="text-center">Jumlah Terjual (Tahun)</th>
+            <th class="text-end">Total Pendapatan (Tahun)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in annual_pagination.items %}
+            <tr>
+              <td>{{ row.product_name }}</td>
+              <td>{{ row.product_type }}</td>
+              <td class="text-center">{{ row.total_qty }}</td>
+              <td class="text-end">Rp {{ row.total_revenue|currency }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">Belum ada data penjualan untuk ditampilkan.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="mt-2">
+    <ul class="pagination pagination-sm justify-content-end">
+      <li class="page-item {% if not annual_pagination.has_prev %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.page, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.prev_num, per_page_year=per_page_year) }}">Sebelumnya</a>
+      </li>
+        {% for token in annual_pagination.pages | pagination_tokens(annual_pagination.page) %}
+          {% if token == '...' %}
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          {% else %}
+            <li class="page-item {% if token == annual_pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.page, per_page_month=per_page_month, annual_year=annual_year, page_year=token, per_page_year=per_page_year) }}">{{ token }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+      <li class="page-item {% if not annual_pagination.has_next %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('reports.sales_report', month=month, year=year, page_month=monthly_pagination.page, per_page_month=per_page_month, annual_year=annual_year, page_year=annual_pagination.next_num, per_page_year=per_page_year) }}">Berikutnya</a>
+      </li>
+    </ul>
+  </nav>
+{% endblock %}

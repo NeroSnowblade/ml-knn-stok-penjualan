@@ -1,0 +1,33 @@
+body {
+  background-color: #f4f6f9;
+}
+
+#layout-wrapper {
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+}
+
+.sidebar .nav-link {
+  color: #ced4da;
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+main {
+  background-color: #f4f6f9;
+}
+
+.flash-container {
+  max-width: 720px;
+}
+
+.table > :not(caption) > * > * {
+  vertical-align: middle;
+}

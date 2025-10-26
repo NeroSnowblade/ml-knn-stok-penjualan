@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% set active_page = "products" %}
+
+{% block title %}Data Produk{% endblock %}
+{% block header %}Kelola Produk{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <form class="d-flex align-items-center" method="get">
+        <label for="per_page" class="me-2">Baris per halaman:</label>
+        <select class="form-select form-select-sm w-auto" name="per_page" id="per_page" onchange="this.form.submit()">
+          {% for option in per_page_options %}
+            <option value="{{ option }}" {% if option == per_page %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProductModal">Tambah Produk</button>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Nama</th>
+            <th>Tipe</th>
+            <th class="text-center">Stok</th>
+            <th class="text-end">Harga</th>
+            <th class="text-end">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in pagination.items %}
+            <tr>
+              <td>{{ product.nama }}</td>
+              <td>{{ product.tipe_barang }}</td>
+              <td class="text-center">{{ product.jumlah_stok }}</td>
+              <td class="text-end">Rp {{ product.harga|currency }}</td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                  <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProductModal{{ product.id }}">Edit</button>
+                  <form action="{{ url_for('products.delete_product', product_id=product.id) }}" method="post" class="d-inline" onsubmit="return confirm('Hapus produk ini?');">
+                    <button type="submit" class="btn btn-outline-danger">Hapus</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+
+            <div class="modal fade" id="editProductModal{{ product.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form action="{{ url_for('products.update_product', product_id=product.id) }}" method="post">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Edit Produk</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label" for="nama-{{ product.id }}">Nama</label>
+                        <input type="text" class="form-control" id="nama-{{ product.id }}" name="nama" value="{{ product.nama }}" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label" for="tipe-{{ product.id }}">Tipe Barang</label>
+                        <input type="text" class="form-control" id="tipe-{{ product.id }}" name="tipe_barang" value="{{ product.tipe_barang }}" required>
+                      </div>
+                      <div class="row g-2">
+                        <div class="col-md-6">
+                          <label class="form-label" for="stok-{{ product.id }}">Stok</label>
+                          <input type="number" class="form-control" id="stok-{{ product.id }}" name="jumlah_stok" min="0" value="{{ product.jumlah_stok }}" required>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="harga-{{ product.id }}">Harga</label>
+                          <input type="number" step="0.01" class="form-control" id="harga-{{ product.id }}" name="harga" min="0" value="{{ product.harga|float }}" required>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                      <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Belum ada data produk.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-end">
+      <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('products.list_products', page=pagination.prev_num, per_page=per_page) }}">Sebelumnya</a>
+      </li>
+      {% for token in pagination.pages | pagination_tokens(pagination.page) %}
+        {% if token == '...' %}
+          <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+        {% else %}
+          <li class="page-item {% if token == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('products.list_products', page=token, per_page=per_page) }}">{{ token }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('products.list_products', page=pagination.next_num, per_page=per_page) }}">Berikutnya</a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="modal fade" id="createProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form action="{{ url_for('products.create_product') }}" method="post">
+          <div class="modal-header">
+            <h5 class="modal-title">Tambah Produk</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" for="nama">Nama</label>
+              <input type="text" class="form-control" id="nama" name="nama" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="tipe_barang">Tipe Barang</label>
+              <input type="text" class="form-control" id="tipe_barang" name="tipe_barang" required>
+            </div>
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label" for="jumlah_stok">Stok</label>
+                <input type="number" class="form-control" id="jumlah_stok" name="jumlah_stok" min="0" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="harga">Harga</label>
+                <input type="number" step="0.01" class="form-control" id="harga" name="harga" min="0" required>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
