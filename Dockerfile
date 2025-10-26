@@ -20,7 +20,11 @@ COPY . .
 ENV PORT 5000
 EXPOSE ${PORT}
 
-# Use gunicorn (WSGI) for production. App entrypoint is `app:app` (app.py -> create_app())
-# Use shell form so the $PORT env var is expanded by the shell at container start.
-# This avoids errors where the JSON array form would pass the literal '${PORT}'.
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 3
+# Copy a tiny start script that launches the server via Waitress.
+# Using a start script ensures environment variable expansion works reliably
+# and avoids platform-specific issues with different WSGI servers.
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Default command: use the start script which runs Waitress
+CMD ["/start.sh"]
